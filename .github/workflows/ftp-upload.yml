@@ -1,0 +1,29 @@
+name: FTP Upload
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: FTP Deploy
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}/
+          local-dir: ./
+          dangerous-clean-slate: false  # falseに設定すると差分のみアップロード
+          state-name: .ftp-deploy-sync-state.json  # 状態ファイル名
+          # 必要に応じて以下のオプションを設定
+          # exclude: |
+          #   .git*
+          #   .git*/**
+          #   node_modules/** 
