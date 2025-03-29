@@ -1,0 +1,53 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  check-staging-enabled:
+    runs-on: ubuntu-latest
+    outputs:
+      staging-enabled: ${{ steps.check-var.outputs.staging-enabled }}
+    steps:
+      - id: check-var
+        run: |
+          if [[ "${{ vars.STAGING_ENABLED }}" == "true" ]]; then
+            echo "staging-enabled=true" >> $GITHUB_OUTPUT
+          else
+            echo "staging-enabled=false" >> $GITHUB_OUTPUT
+          fi
+
+  deploy-staging:
+    needs: check-staging-enabled
+    if: needs.check-staging-enabled.outputs.staging-enabled == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Load FTP config
+        id: config
+        run: |
+          # ローカルディレクトリの読み込み
+          LOCAL_DIR=$(cat .github/workflows/config/ftp-config.yml | grep "local_dir:" | cut -d ":" -f 2- | xargs)
+          echo "local_dir=$LOCAL_DIR" >> $GITHUB_OUTPUT
+          
+          # 除外パターンの読み込み
+          EXCLUDE_PATTERNS=$(cat .github/workflows/config/ftp-config.yml | grep -A 100 "exclude_patterns:" | tail -n +2)
+          echo "patterns<<EOF" >> $GITHUB_OUTPUT
+          echo "$EXCLUDE_PATTERNS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: FTP Deploy to Staging
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.STAGING_FTP_SERVER }}
+          username: ${{ secrets.STAGING_FTP_USERNAME }}
+          password: ${{ secrets.STAGING_FTP_PASSWORD }}
+          server-dir: ${{ secrets.STAGING_FTP_SERVER_DIR }}/
+          local-dir: ${{ steps.config.outputs.local_dir }}
+          dangerous-clean-slate: false
+          state-name: .ftp-deploy-sync-state-staging.json
+          exclude: ${{ steps.config.outputs.patterns }}

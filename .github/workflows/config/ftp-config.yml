@@ -1,0 +1,13 @@
+# FTPデプロイの共通設定
+
+# アップロード対象のローカルディレクトリ
+local_dir: ./
+
+# FTPデプロイ時の除外パターン設定
+exclude_patterns: |
+  .git*
+  .git*/**
+  node_modules/**
+  .github/**
+  README.md
+  .ftp-deploy-sync-state*.json 
